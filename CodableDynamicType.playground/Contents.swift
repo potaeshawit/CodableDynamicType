@@ -1,111 +1,110 @@
 import Foundation
 
-let data = """
+let dataJSON = """
 {
     "sections": [
         {
             "type": 1,
             "items": [
                 {
-                    "title": "type-one-title-1",
-                    "photo_url": "type-one-photoUrl-1"
-                },
-                {
-                    "title": "type-one-title-2",
-                    "photo_url": "type-one-photoUrl-2"
-                },
+                    "title": "type-1-title-1",
+                    "subtitle": "type-1-subtitle-1"
+                }
             ]
         },
         {
             "type": 2,
             "items": [
                 {
-                    "title": "type-one-title-1",
-                    "subtitle": "type-one-subtitle-1"
+                    "title": "type-2-title-1",
+                    "photo_url": "type-2-photoUrl-1"
                 },
                 {
-                    "title": "type-one-title-2",
-                    "subtitle": "type-one-subtitle-2"
-                },
+                    "title": "type-2-title-2",
+                    "photo_url": "type-2-photoUrl-2"
+                }
             ]
-        },
+        }
     ]
 }
 """
 
-// ----------------------------------------------------------
 // Entity
-
-struct ArticleSimplePhoto: Codable {
-    let title: String?
-    let photoUrl: String?
-}
-
-struct ArticleSimpleText: Codable {
+struct ArticleText: Codable {
     let title: String?
     let subtitle: String?
 }
 
-// ----------------------------------------------------------
-// ArticleSection
+struct ArticlePhoto: Codable {
+    let title: String?
+    let photoUrl: String?
+}
+
 enum ArticleSection {
-    case simplePhoto([ArticleSimplePhoto])
-    case simpleText([ArticleSimpleText])
+    case text([ArticleText])
+    case photo([ArticlePhoto])
     
     enum type: Int, Codable {
-        case simplePhoto = 1, simpleText
+        case text = 1, photo
     }
 }
 
 extension ArticleSection: Codable {
+    // 1
     private enum CodingKeys: String, CodingKey {
         case type, items
     }
     
+    // 2
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(ArticleSection.type.self, forKey: .type)
-        
         switch type {
-        case .simpleText:
-            let items = try container.decode([ArticleSimpleText].self, forKey: .items)
-            self = .simpleText(items)
-        case .simplePhoto:
-            let items = try container.decode([ArticleSimplePhoto].self, forKey: .items)
-            self = .simplePhoto(items)
+        case .text:
+            let items = try container.decode([ArticleText].self, forKey: .items)
+            self = .text(items)
+        case .photo:
+            let items = try container.decode([ArticlePhoto].self, forKey: .items)
+            self = .photo(items)
         }
     }
     
+    // 3
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         switch self {
-        case .simpleText(let attachment):
-            try container.encode(ArticleSection.type.simpleText.rawValue, forKey: .type)
+        case .text(let attachment):
+            try container.encode(ArticleSection.type.text.rawValue, forKey: .type)
             try container.encode(attachment, forKey: .items)
-        case .simplePhoto(let attachment):
-            try container.encode(ArticleSection.type.simplePhoto.rawValue, forKey: .type)
+        case .photo(let attachment):
+            try container.encode(ArticleSection.type.photo.rawValue, forKey: .type)
             try container.encode(attachment, forKey: .items)
         }
     }
 }
 
-// ----------------------------------------------------------
 // Response
-
 struct ArticleResponse: Codable {
     let sections: [ArticleSection]
 }
 
+// Decoding
 let decoder = JSONDecoder()
 decoder.keyDecodingStrategy = .convertFromSnakeCase
-let article = try decoder.decode(ArticleResponse.self, from: data.data(using: .utf8)!)
+let data = dataJSON.data(using: .utf8)!
+let article = try decoder.decode(ArticleResponse.self, from: data)
 
+// Results
 article.sections.forEach {
     switch $0 {
-    case .simpleText(let items):
-        items.forEach { print($0) }
-    case .simplePhoto(let items):
-        items.forEach { print($0) }
+    case .text(let items):
+        items.forEach {
+            print("text: \($0.title ?? ""), \($0.subtitle ?? "")")
+        }
+    case .photo(let items):
+        items.forEach {
+            print("photo: \($0.title ?? ""), \($0.photoUrl ?? "")")
+        }
     }
 }
